@@ -1,35 +1,33 @@
-import * as core from "@actions/core";
+import * as core from '@actions/core';
 
-export interface TruncateConfig {
-  slackMaxLength: number;
-  emailMaxLength: number;
-  preserveSections: boolean;
-}
-
-const SLACK_DEFAULT_MAX = 3000;
-const EMAIL_DEFAULT_MAX = 100000;
-
-function parsePositiveInt(value: string, fallback: number, name: string): number {
-  if (!value) return fallback;
+export function parsePositiveInt(value: string, name: string): number | undefined {
+  if (!value || value.trim() === '') return undefined;
   const parsed = parseInt(value, 10);
   if (isNaN(parsed) || parsed <= 0) {
-    core.warning(`Invalid value for ${name}: "${value}". Using default: ${fallback}.`);
-    return fallback;
+    throw new Error(`Invalid value for '${name}': expected a positive integer, got '${value}'`);
   }
   return parsed;
 }
 
-/**
- * Loads truncation configuration from GitHub Actions inputs.
- */
+export interface TruncateConfig {
+  maxSections: number | undefined;
+  maxPRsPerSection: number | undefined;
+  maxTotalPRs: number | undefined;
+}
+
 export function loadTruncateConfig(): TruncateConfig {
-  const slackMaxRaw = core.getInput("slack_max_length");
-  const emailMaxRaw = core.getInput("email_max_length");
-  const preserveRaw = core.getInput("truncate_preserve_sections");
+  const maxSections = parsePositiveInt(
+    core.getInput('max_sections'),
+    'max_sections'
+  );
+  const maxPRsPerSection = parsePositiveInt(
+    core.getInput('max_prs_per_section'),
+    'max_prs_per_section'
+  );
+  const maxTotalPRs = parsePositiveInt(
+    core.getInput('max_total_prs'),
+    'max_total_prs'
+  );
 
-  const slackMaxLength = parsePositiveInt(slackMaxRaw, SLACK_DEFAULT_MAX, "slack_max_length");
-  const emailMaxLength = parsePositiveInt(emailMaxRaw, EMAIL_DEFAULT_MAX, "email_max_length");
-  const preserveSections = preserveRaw.toLowerCase() !== "false";
-
-  return { slackMaxLength, emailMaxLength, preserveSections };
+  return { maxSections, maxPRsPerSection, maxTotalPRs };
 }
