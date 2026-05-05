@@ -1,73 +1,56 @@
-import { PullRequest } from '../github/fetchMergedPRs';
-
-export interface DigestOptions {
-  weekStart: string;
-  weekEnd: string;
-  repoName: string;
+export interface PR {
+  number: number;
+  title: string;
+  url: string;
+  author?: string;
+  mergedAt?: string;
+  labels: string[];
 }
 
 export interface DigestSection {
-  title: string;
-  prs: PullRequest[];
+  label: string;
+  prs: PR[];
 }
 
-function groupByLabel(prs: PullRequest[]): Record<string, PullRequest[]> {
-  const groups: Record<string, PullRequest[]> = {
-    features: [],
-    bugfixes: [],
-    chores: [],
-    other: [],
-  };
+export function groupByLabel(prs: PR[], labelOrder: string[]): DigestSection[] {
+  const map = new Map<string, PR[]>();
 
   for (const pr of prs) {
-    const labels = pr.labels.map((l) => l.name.toLowerCase());
-    if (labels.some((l) => l.includes('feature') || l.includes('enhancement'))) {
-      groups.features.push(pr);
-    } else if (labels.some((l) => l.includes('bug') || l.includes('fix'))) {
-      groups.bugfixes.push(pr);
-    } else if (labels.some((l) => l.includes('chore') || l.includes('maintenance'))) {
-      groups.chores.push(pr);
-    } else {
-      groups.other.push(pr);
+    const matched = pr.labels.find((l) => labelOrder.includes(l));
+    const key = matched ?? 'other';
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(pr);
+  }
+
+  const ordered: DigestSection[] = [];
+
+  for (const label of labelOrder) {
+    if (map.has(label)) {
+      ordered.push({ label, prs: map.get(label)! });
     }
   }
 
-  return groups;
-}
-
-function formatPRLine(pr: PullRequest): string {
-  return `- [#${pr.number} ${pr.title}](${pr.html_url}) by @${pr.user.login}`;
-}
-
-export function generateDigest(prs: PullRequest[], options: DigestOptions): string {
-  const { weekStart, weekEnd, repoName } = options;
-  const lines: string[] = [];
-
-  lines.push(`# Weekly PR Digest — ${repoName}`);
-  lines.push(`**Period:** ${weekStart} → ${weekEnd}`);
-  lines.push(`**Total merged PRs:** ${prs.length}`);
-  lines.push('');
-
-  if (prs.length === 0) {
-    lines.push('_No pull requests were merged this week._');
-    return lines.join('\n');
+  if (map.has('other')) {
+    ordered.push({ label: 'other', prs: map.get('other')! });
   }
 
-  const groups = groupByLabel(prs);
-  const sectionMap: DigestSection[] = [
-    { title: '🚀 Features', prs: groups.features },
-    { title: '🐛 Bug Fixes', prs: groups.bugfixes },
-    { title: '🔧 Chores', prs: groups.chores },
-    { title: '📦 Other', prs: groups.other },
-  ];
+  return ordered;
+}
 
-  for (const section of sectionMap) {
-    if (section.prs.length === 0) continue;
-    lines.push(`## ${section.title}`);
-    lines.push('');
-    section.prs.forEach((pr) => lines.push(formatPRLine(pr)));
-    lines.push('');
+export function formatPRLine(pr: PR): string {
+  return `- [#${pr.number}](${pr.url}) ${pr.title}`;
+}
+
+export function generateDigest(prs: PR[], labelOrder: string[]): string {
+  const sections = groupByLabel(prs, labelOrder);
+  const parts: string[] = ['# Weekly PR Digest'];
+
+  for (const section of sections) {
+    parts.push(`\n### ${section.label}\n`);
+    for (const pr of section.prs) {
+      parts.push(formatPRLine(pr));
+    }
   }
 
-  return lines.join('\n').trimEnd();
+  return parts.join('\n');
 }
