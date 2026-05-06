@@ -3,10 +3,9 @@ import * as core from '@actions/core';
 export type DiffMode = 'none' | 'summary' | 'full';
 
 export interface DiffConfig {
-  enabled: boolean;
   mode: DiffMode;
   maxLines: number;
-  includeFileList: boolean;
+  showFilenames: boolean;
 }
 
 export function parseDiffMode(value: string): DiffMode {
@@ -14,33 +13,32 @@ export function parseDiffMode(value: string): DiffMode {
   if (normalized === 'none' || normalized === 'summary' || normalized === 'full') {
     return normalized;
   }
-  core.warning(`Invalid diff_mode "${value}", defaulting to "none"`);
-  return 'none';
+  throw new Error(`Invalid diff mode: "${value}". Expected one of: none, summary, full`);
 }
 
 export function parseMaxLines(value: string): number {
-  const parsed = parseInt(value, 10);
-  if (isNaN(parsed) || parsed < 0) {
-    core.warning(`Invalid diff_max_lines "${value}", defaulting to 20`);
-    return 20;
+  const num = parseInt(value, 10);
+  if (isNaN(num) || num < 0) {
+    throw new Error(`Invalid max_diff_lines value: "${value}". Must be a non-negative integer`);
   }
-  return parsed;
+  return num;
 }
 
 export function parseBooleanFlag(value: string): boolean {
-  return value.trim().toLowerCase() === 'true';
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true' || normalized === '1' || normalized === 'yes') return true;
+  if (normalized === 'false' || normalized === '0' || normalized === 'no') return false;
+  throw new Error(`Invalid boolean value: "${value}"`);
 }
 
 export function loadDiffConfig(): DiffConfig {
-  const enabled = parseBooleanFlag(core.getInput('diff_enabled') || 'false');
-  const mode = parseDiffMode(core.getInput('diff_mode') || 'none');
-  const maxLines = parseMaxLines(core.getInput('diff_max_lines') || '20');
-  const includeFileList = parseBooleanFlag(core.getInput('diff_include_file_list') || 'true');
+  const modeRaw = core.getInput('diff_mode') || 'none';
+  const maxLinesRaw = core.getInput('max_diff_lines') || '50';
+  const showFilenamesRaw = core.getInput('diff_show_filenames') || 'true';
 
-  return {
-    enabled,
-    mode,
-    maxLines,
-    includeFileList,
-  };
+  const mode = parseDiffMode(modeRaw);
+  const maxLines = parseMaxLines(maxLinesRaw);
+  const showFilenames = parseBooleanFlag(showFilenamesRaw);
+
+  return { mode, maxLines, showFilenames };
 }
