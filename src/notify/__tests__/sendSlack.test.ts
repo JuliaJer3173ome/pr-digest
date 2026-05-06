@@ -44,6 +44,15 @@ describe("sendSlack", () => {
     expect(result.error).toBe("channel_not_found");
   });
 
+  it("returns ok: false with generic message when non-Error is thrown", async () => {
+    mockPostMessage.mockRejectedValueOnce("unexpected failure");
+
+    const result = await sendSlack(baseConfig, sampleText);
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBeDefined();
+  });
+
   it("throws when token is missing", async () => {
     await expect(
       sendSlack({ token: "", channel: "#releases" }, sampleText)
