@@ -49,7 +49,11 @@ export function renderSummaryBlock(
 
   if (config.showLabelBreakdown && Object.keys(summary.labelCounts).length > 0) {
     lines.push('- **Labels:**');
-    for (const [label, count] of Object.entries(summary.labelCounts)) {
+    // Sort labels by count descending for easier scanning
+    const sortedLabels = Object.entries(summary.labelCounts).sort(
+      ([, a], [, b]) => b - a
+    );
+    for (const [label, count] of sortedLabels) {
       lines.push(`  - \`${label}\`: ${count}`);
     }
   }
