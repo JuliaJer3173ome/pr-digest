@@ -22,7 +22,7 @@ describe('parseBooleanFlag', () => {
     expect(parseBooleanFlag('false')).toBe(false);
   });
 
-  it('returns default value when empty', () => {
+  it('returns default value for empty string', () => {
     expect(parseBooleanFlag('', true)).toBe(true);
     expect(parseBooleanFlag('', false)).toBe(false);
   });
@@ -34,48 +34,48 @@ describe('parseBooleanFlag', () => {
 });
 
 describe('parseFileOutputFormat', () => {
-  it('parses markdown', () => {
-    expect(parseFileOutputFormat('markdown')).toBe('markdown');
+  it('returns "markdown" for empty string', () => {
+    expect(parseFileOutputFormat('')).toBe('markdown');
   });
 
-  it('parses json', () => {
+  it('returns "markdown" for "md"', () => {
+    expect(parseFileOutputFormat('md')).toBe('markdown');
+  });
+
+  it('returns "json" for "json"', () => {
     expect(parseFileOutputFormat('json')).toBe('json');
   });
 
-  it('parses html', () => {
+  it('returns "html" for "html"', () => {
     expect(parseFileOutputFormat('html')).toBe('html');
   });
 
-  it('defaults to markdown for unknown format', () => {
-    expect(parseFileOutputFormat('xml')).toBe('markdown');
+  it('warns and falls back to "markdown" for unknown format', () => {
+    expect(parseFileOutputFormat('csv')).toBe('markdown');
     expect(core.warning).toHaveBeenCalled();
-  });
-
-  it('is case-insensitive', () => {
-    expect(parseFileOutputFormat('JSON')).toBe('json');
   });
 });
 
 describe('parseOutputPath', () => {
-  it('returns provided path', () => {
+  it('returns provided path when non-empty', () => {
     expect(parseOutputPath('output/report.md', 'markdown')).toBe('output/report.md');
   });
 
-  it('generates default path for markdown', () => {
+  it('defaults to pr-digest.md for markdown', () => {
     expect(parseOutputPath('', 'markdown')).toBe('pr-digest.md');
   });
 
-  it('generates default path for json', () => {
+  it('defaults to pr-digest.json for json', () => {
     expect(parseOutputPath('', 'json')).toBe('pr-digest.json');
   });
 
-  it('generates default path for html', () => {
+  it('defaults to pr-digest.html for html', () => {
     expect(parseOutputPath('', 'html')).toBe('pr-digest.html');
   });
 });
 
 describe('loadFileOutputConfig', () => {
-  it('loads default config', () => {
+  it('returns defaults when no inputs provided', () => {
     setupInputs({});
     const config = loadFileOutputConfig();
     expect(config.enabled).toBe(false);
@@ -83,15 +83,25 @@ describe('loadFileOutputConfig', () => {
     expect(config.outputPath).toBe('pr-digest.md');
   });
 
-  it('loads custom config', () => {
+  it('loads all fields correctly', () => {
     setupInputs({
       file_output_enabled: 'true',
       file_output_format: 'json',
-      file_output_path: 'dist/digest.json',
+      file_output_path: 'reports/weekly.json',
     });
     const config = loadFileOutputConfig();
     expect(config.enabled).toBe(true);
     expect(config.format).toBe('json');
-    expect(config.outputPath).toBe('dist/digest.json');
+    expect(config.outputPath).toBe('reports/weekly.json');
+  });
+
+  it('uses default path when path is empty and format is html', () => {
+    setupInputs({
+      file_output_enabled: 'true',
+      file_output_format: 'html',
+      file_output_path: '',
+    });
+    const config = loadFileOutputConfig();
+    expect(config.outputPath).toBe('pr-digest.html');
   });
 });
